@@ -1,0 +1,149 @@
+name: Build Preview App
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+      - cron: '0 6 * * 5'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'rebelonion/Dantotsu'
+          ref: 'dev'
+          fetch-depth: 0
+          
+      - name: Download last SHA artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          repo: 'Sadwhy/Dantotsu-Builder'
+          workflow: release.yml
+          name: last-sha
+          path: .
+        continue-on-error: true
+
+      - name: Check for updates
+        run: |
+          LATEST_SHA=$(git rev-parse HEAD)
+          echo "Latest commit SHA: $LATEST_SHA"
+          echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_ENV
+
+          # Read the last SHA from last_sha.txt if it exists
+          if [ -f last_sha.txt ]; then
+            LAST_SHA=$(cat last_sha.txt)
+            echo "Last saved commit SHA: $LAST_SHA"
+          else
+            LAST_SHA=""
+            echo "No previous SHA found."
+          fi
+
+          if [ "$LATEST_SHA" == "$LAST_SHA" ]; then
+            echo "No updates found. Canceling the workflow."
+            exit 1
+          else
+            echo "Updates found. Continuing workflow."
+          fi
+
+      - name: Get Commits Since Last Run
+        run: |
+          if [ -f last_sha.txt ]; then
+          LAST_SHA=$(cat last_sha.txt) 
+          else
+            # Fallback to first commit if no previous SHA available
+            LAST_SHA=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "Commits since $LAST_SHA"
+          # Accumulate commit logs
+          echo -e 'Dantotsu Weekly Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| ' > commit_logs.txt
+          echo $(cat commit_logs.txt)
+        shell: /usr/bin/bash -e {0}
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: Save Current SHA for Next Run
+        run: echo ${{ env.LATEST_SHA }} > last_sha.txt
+
+      - name: Fetch version name
+        run: |
+          VER=$(grep -E -o "versionName \".*\"" app/build.gradle | sed -e 's/versionName //g' | tr -d '"')
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          VERSION="$VER+$COMMIT_HASH"
+          echo "Version $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update app version
+        run: |
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" app/build.gradle
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: gradle
+  
+      - name: List files in the directory
+        run: ls -l
+      
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew assembleFdroidRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: app/build/outputs/apk/fdroid/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+
+      - name: Move APK and calculate checksum
+        run: |
+          mv app/build/outputs/apk/fdroid/release/app-fdroid-release-signed.apk release-fdroid-${{ env.VERSION }}.apk
+          printf '%s' "$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1)" >> commit_logs.txt
+
+      - name: Upload Current SHA as an Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: last_sha.txt
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dantotsu
+          retention-days: 5
+          path: "release-fdroid-${{ env.VERSION }}.apk"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          body_path: commit_logs.txt
+          files: release-fdroid-${{ env.VERSION }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune old releases
+        uses: dev-drprasad/delete-older-releases@v0.3.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          keep_latest: 5
+          delete_tags: true

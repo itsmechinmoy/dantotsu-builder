@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Commits since $LAST_SHA"
           # Accumulate commit logs
-          echo -e 'Dantotsu Weekly Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| ' > commit_logs.txt
+          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| ' > commit_logs.txt
           echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
@@ -75,15 +75,11 @@ jobs:
 
       - name: Fetch version name
         run: |
-          VER=$(grep -E -o "versionName \".*\"" app/build.gradle | sed -e 's/versionName //g' | tr -d '"')
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          VERSION="$VER+$COMMIT_HASH"
+          VERSION="C$(git rev-list --count dev)"
+          sed -i '/versionNameSuffix "-fdroid"/d' app/build.gradle
+          sed -i 's/versionName "[^"]*"/versionName "$VERSION"/' app/build.gradle
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Update app version
-        run: |
-          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" app/build.gradle
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4

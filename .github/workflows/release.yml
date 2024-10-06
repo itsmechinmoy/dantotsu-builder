@@ -77,7 +77,7 @@ jobs:
         run: |
           VERSION="C$(git rev-list --count dev)"
           sed -i '/versionNameSuffix "-fdroid"/d' app/build.gradle
-          sed -i 's/versionName "[^"]*"/versionName "$VERSION"/' app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" app/build.gradle
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 

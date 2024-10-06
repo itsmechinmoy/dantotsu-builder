@@ -80,7 +80,6 @@ jobs:
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" app/build.gradle
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          cat app/build.gradle
 
       - name: Deal with comments
         run: |

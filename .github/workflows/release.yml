@@ -81,6 +81,11 @@ jobs:
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Deal with comments
+        run: |
+           sed -i '/CommentsAPI\.fetchAuthToken(this@App)/d' app/src/main/java/ani/dantotsu/App.kt
+           sed -i 's|https://api.dantotsu.app|http://localhost|g' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
+           
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:

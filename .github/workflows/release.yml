@@ -88,7 +88,7 @@ jobs:
 
       - name: Temporary dependency replacement
         run: |
-           sed -i "s/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.1'/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.0'/g" app/build.gradle
+           sed -i "s/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.1'/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.1'/g" app/build.gradle
            sed -i "s/implementation 'com.github.inorichi.injekt:injekt-core:65b0440'/implementation 'uy.kohesive.injekt:injekt-core:1.16.+'/g" app/build.gradle
            sed -i "s/implementation 'com.github.RepoDevil:AnimatedBottomBar:7fcb9af'/implementation 'com.github.8bitDream:AnimatedBottomBar:66328da'/g" app/build.gradle
            

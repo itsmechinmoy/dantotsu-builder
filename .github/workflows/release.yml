@@ -37,7 +37,6 @@ jobs:
           echo "Latest commit SHA: $LATEST_SHA"
           echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_ENV
 
-          # Read the last SHA from last_sha.txt if it exists
           if [ -f last_sha.txt ]; then
             LAST_SHA=$(cat last_sha.txt)
             echo "Last saved commit SHA: $LAST_SHA"
@@ -56,15 +55,12 @@ jobs:
       - name: Get Commits Since Last Run
         run: |
           if [ -f last_sha.txt ]; then
-          LAST_SHA=$(cat last_sha.txt) 
+            LAST_SHA=$(cat last_sha.txt) 
           else
-            # Fallback to first commit if no previous SHA available
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           echo "Commits since $LAST_SHA"
-          # Accumulate commit logs
           echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| ' > commit_logs.txt
-          echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
           CI: true
@@ -122,7 +118,7 @@ jobs:
       - name: Move APK and calculate checksum
         run: |
           mv app/build/outputs/apk/fdroid/release/app-fdroid-release-signed.apk release-fdroid-${{ env.VERSION }}.apk
-          printf '%s' "$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1)" >> commit_logs.txt
+          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| '$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1)' |' > commit_logs.txt
 
       - name: Upload Current SHA as an Artifact
         uses: actions/upload-artifact@v4

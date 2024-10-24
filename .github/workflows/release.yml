@@ -80,7 +80,7 @@ jobs:
       - name: Deal with comments
         run: |
            sed -i '/CommentsAPI\.fetchAuthToken(this@App)/d' app/src/main/java/ani/dantotsu/App.kt
-           sed -i 's|https://api.dantotsu.app|127.0.0.1|g' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
+           sed -i 's|https://api.dantotsu.app|https://127.0.0.1|g' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
 
       - name: Temporary dependency replacement
         run: |

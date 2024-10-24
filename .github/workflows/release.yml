@@ -82,12 +82,6 @@ jobs:
            sed -i '/CommentsAPI\.fetchAuthToken(this@App)/d' app/src/main/java/ani/dantotsu/App.kt
            sed -i 's|https://api.dantotsu.app|https://127.0.0.1|g' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
 
-      - name: Temporary dependency replacement
-        run: |
-           sed -i "s/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.1'/implementation 'com.github.AAChartModel:AAChartCore-Kotlin:7.2.0'/g" app/build.gradle
-           sed -i "s/implementation 'com.github.inorichi.injekt:injekt-core:65b0440'/implementation 'uy.kohesive.injekt:injekt-core:1.16.+'/g" app/build.gradle
-           sed -i "s/implementation 'com.github.RepoDevil:AnimatedBottomBar:7fcb9af'/implementation 'com.github.8bitDream:AnimatedBottomBar:66328da'/g" app/build.gradle
-           
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
@@ -118,7 +112,7 @@ jobs:
       - name: Move APK and calculate checksum
         run: |
           mv app/build/outputs/apk/fdroid/release/app-fdroid-release-signed.apk release-fdroid-${{ env.VERSION }}.apk
-          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| '$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1)' |' > commit_logs.txt
+          printf '%s' "$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
 
       - name: Upload Current SHA as an Artifact
         uses: actions/upload-artifact@v4

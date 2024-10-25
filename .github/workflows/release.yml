@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Commits since $LAST_SHA"
           # Accumulate commit logs
-          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n| ' > commit_logs.txt
+          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |\n ' > commit_logs.txt
           echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
@@ -116,7 +116,7 @@ jobs:
       - name: Move APK and calculate checksum
         run: |
           mv app/build/outputs/apk/fdroid/release/app-fdroid-release-signed.apk release-fdroid-${{ env.VERSION }}.apk
-          printf '%s' "$(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          printf '%s' "| $(sha256sum release-fdroid-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
 
       - name: Upload Current SHA as an Artifact
         uses: actions/upload-artifact@v4

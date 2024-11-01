@@ -18,7 +18,7 @@ jobs:
       - name: Clone Repository
         uses: actions/checkout@v4
         with:
-          repository: 'Dawn-used-yeet/Dawntotsu'
+          repository: 'rebelonion/Dantotsu'
           ref: 'dev'
           fetch-depth: 0
           

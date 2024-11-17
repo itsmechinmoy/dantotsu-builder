@@ -81,16 +81,6 @@ jobs:
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Deal with comments
-        run: |
-           sed -i '/CommentsAPI\.fetchAuthToken(this@App)/d' app/src/main/java/ani/dantotsu/App.kt
-           sed -i 's|https://api.dantotsu.app|https://127.0.0.1|g' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
-           sed -i '/navBar\.addTab(commentTab)/d' app/src/main/java/ani/dantotsu/media/MediaDetailsActivity.kt
-           sed -i '/Logger\.log(reason)/d; /if (isOnline) snackString(reason)/d' app/src/main/java/ani/dantotsu/connections/comments/CommentsAPI.kt
-           sed -i -e '/Pair(R.drawable.ic_round_comment_24, "Comments")/d' \
-                  -e 's/getItemCount(): Int = if (id != -1) 1 else 4/getItemCount(): Int = if (id != -1) 1 else 3/' \
-                  -e 's/3 -> newInstance(COMMENT)//' app/src/main/java/ani/dantotsu/profile/notification/NotificationActivity.kt
-
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:

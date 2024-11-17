@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Commits since $LAST_SHA"
           # Accumulate commit logs
-          echo -e 'Dantotsu Preview\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |' > commit_logs.txt
+          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| SHA-256 |\n| ------- |' > commit_logs.txt
           echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
@@ -75,7 +75,7 @@ jobs:
 
       - name: Fetch version name
         run: |
-          VERSION="C$(git rev-list --count dev)"
+          VERSION="v$(git rev-list --count dev)"
           sed -i '/versionNameSuffix "-fdroid"/d' app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" app/build.gradle
           echo "Version $VERSION"

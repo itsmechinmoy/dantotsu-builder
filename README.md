@@ -5,10 +5,10 @@ This repository automatically builds [**Dantotsu**](https://github.com/rebelonio
 ### Annoyances:
 - **Manual Build Triggers**: In case of major updates, I can trigger a manual build if needed.
 - **Different Signatures**: This app uses different signing keys compared to the official version, so **both versions cannot be installed simultaneously**. Installing one will prevent the other from updating.
-- **Optimized Performance**: Debugging and Firebase are disabled in this build for better performance.
 - **No Empty Releases**: If the app gets no new commits then this repo won't build it that week.
 
 ### Changes in This Build:
+- **Optimized Performance**: Debugging and Firebase are disabled in this build for better performance.
 - **Comments Feature**: A [PR](https://github.com/rebelonion/Dantotsu/commit/d1e2ca8b5e71cc4e58d3a1201981001cb11fb78a) was added to the main app to make comments toggleable. When installed from this build, the comments feature is **turned off by default**, meaning there will be no connection to the comments API unless you manually enable it.
   - If you choose to disable comments, follow these steps:
     1. Go to the [**Anilist settings**](https://anilist.co/settings/apps) in the website.

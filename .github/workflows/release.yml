@@ -53,8 +53,6 @@ jobs:
             echo "Updates found. Continuing workflow."
             echo "run" > result.txt
           fi
-        shell: /usr/bin/bash
-        continue-on-error: true
 
       - name: Save Update Status
         id: save-status

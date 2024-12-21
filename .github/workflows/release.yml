@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
-
+    outputs:
+      SHOULD_RUN: ${{ steps.compare.outputs.SHOULD_RUN }}
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -32,7 +33,7 @@ jobs:
         continue-on-error: true
 
       - name: Check for updates
-        id: check-updates
+        id: compare
         run: |
           LATEST_SHA=$(git rev-parse HEAD)
           echo "Latest commit SHA: $LATEST_SHA"
@@ -48,16 +49,16 @@ jobs:
 
           if [ "$LATEST_SHA" == "$LAST_SHA" ]; then
             echo "No updates found. Canceling the workflow."
-            echo "SHOULD_RUN=skip" >> $GITHUB_ENV
+            echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
           else
             echo "Updates found. Continuing workflow."
-            echo "SHOULD_RUN=skip" >> $GITHUB_ENV
+            echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
           fi
 
   build:
     runs-on: ubuntu-latest
     needs: check-updates
-    if: $SHOULD_RUN == 'run'
+    if: ${{ needs.check-updates.outputs.SHOULD_RUN == 'true' }}
     env:
       CI: true
 
@@ -72,14 +73,12 @@ jobs:
       - name: Get Commits Since Last Run
         run: |
           if [ -f last_sha.txt ]; then
-          LAST_SHA=$(cat last_sha.txt) 
+            LAST_SHA=$(cat last_sha.txt) 
           else
-            # Fallback to first commit if no previous SHA available
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           echo "Commits since $LAST_SHA"
-          # Accumulate commit logs
-          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| ABI | [...]
+          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| ABI | [...]'
           echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
@@ -98,7 +97,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Inject Split ABI
-        run: sed -i '/^ *defaultConfig {$/a \ \ \ \ \ \ splits {\n\ \ \ \ \ \ \ \ abi {\n\ \ \ \ \ \ \ \ \ \ enable true\n\ \ \ \ \ \ \ \ \ \ reset()\n\ \ \ \ \ \ \ \ \ \ include '\''armeabi-v7a'\'', [...]
+        run: sed -i '/^ *defaultConfig {$/a \ \ \ \ \ \ splits {\n\ \ \ \ \ \ \ \ abi {\n\ \ \ \ \ \ \ \ \ \ enable true\n\ \ \ \ \ \ \ \ \ \ reset()\n\ \ \ \ \ \ \ \ \ \ include '\''armeabi-v7a'\'', '\''arm64-v8a'\'', '\''x86'\'', '\''x86_64'\''\n\ \ \ \ \ \ \ \ \ \ universalApk true\n\ \ \ \ \ \ \ \ }\n\ \ \ \ \ \ }' app/build.gradle
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -126,16 +125,12 @@ jobs:
 
       - name: Move APK and calculate checksum
         run: |
-          # arm64 v8a
           mv app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-signed.apk release-fdroid-arm64-v8a-${{ env.VERSION }}.apk
           printf '%s' "| arm64-v8a | $(sha256sum release-fdroid-arm64-v8a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          # armeabi v7a
           mv app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-signed.apk release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk
           printf '%s' "\n| armeabi-v7a | $(sha256sum release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          # x86
           mv app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-signed.apk release-fdroid-x86-${{ env.VERSION }}.apk
           printf '%s' "\n| x86 | $(sha256sum release-fdroid-x86-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          # x86_64
           mv app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-signed.apk release-fdroid-x86_64-${{ env.VERSION }}.apk
           printf '%s' "\n| x86_64 | $(sha256sum release-fdroid-x86_64-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
 
@@ -163,7 +158,6 @@ jobs:
            release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk
            release-fdroid-x86-${{ env.VERSION }}.apk
            release-fdroid-x86_64-${{ env.VERSION }}.apk
-           
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

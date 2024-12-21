@@ -57,7 +57,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: check-updates
-    if: ${{ env.SHOULD_RUN == 'run' }}
+    if: $SHOULD_RUN == 'run'
     env:
       CI: true
 

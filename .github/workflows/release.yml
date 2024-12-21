@@ -57,12 +57,12 @@ jobs:
         continue-on-error: true
 
       - name: Save Update Status
-        run: cat result.txt
-        id: update-status
+        id: save-status
+        run: |
+          STATUS=$(cat result.txt)
+          echo "status=$STATUS" >> $GITHUB_ENV
+          echo "::set-output name=status::$STATUS"
         shell: bash
-        continue-on-error: true
-        outputs:
-          status: ${{ steps.check-updates.outputs.status }}
 
   build:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
           fi
           echo "Commits since $LAST_SHA"
           # Accumulate commit logs
-          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| ABI | SHA-256 |\n| ------- | ------- |' > commit_logs.txt
+          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| ABI | [...]
           echo $(cat commit_logs.txt)
         shell: /usr/bin/bash -e {0}
         env:
@@ -108,7 +108,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Inject Split ABI
-        run: sed -i '/^ *defaultConfig {$/a \ \ \ \ \ \ splits {\n\ \ \ \ \ \ \ \ abi {\n\ \ \ \ \ \ \ \ \ \ enable true\n\ \ \ \ \ \ \ \ \ \ reset()\n\ \ \ \ \ \ \ \ \ \ include '\''armeabi-v7a'\'', '\''arm64-v8a'\'', '\''x86'\'', '\''x86_64'\''\n\ \ \ \ \ \ \ \ \ \ universalApk false\n\ \ \ \ \ \ \ \ }\n\ \ \ \ \ \ }' app/build.gradle
+        run: sed -i '/^ *defaultConfig {$/a \ \ \ \ \ \ splits {\n\ \ \ \ \ \ \ \ abi {\n\ \ \ \ \ \ \ \ \ \ enable true\n\ \ \ \ \ \ \ \ \ \ reset()\n\ \ \ \ \ \ \ \ \ \ include '\''armeabi-v7a'\'', [...]
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -186,4 +186,4 @@ jobs:
           delete_tags: true
 
       - name: List files in the directory
-        run: ls -l          
+        run: ls -l

@@ -137,13 +137,13 @@ jobs:
       - name: Move APK and calculate checksum
         run: |
           mv app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-signed.apk release-fdroid-arm64-v8a-${{ env.VERSION }}.apk
-          echo -e "\n| arm64-v8a | $(sha256sum release-fdroid-arm64-v8a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          echo -e "| arm64-v8a | $(sha256sum release-fdroid-arm64-v8a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
           mv app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-signed.apk release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk
-          echo -e "\n| armeabi-v7a | $(sha256sum release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          echo -e "| armeabi-v7a | $(sha256sum release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
           mv app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-signed.apk release-fdroid-x86-${{ env.VERSION }}.apk
-          echo -e "\n| x86 | $(sha256sum release-fdroid-x86-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          echo -e "| x86 | $(sha256sum release-fdroid-x86-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
           mv app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-signed.apk release-fdroid-x86_64-${{ env.VERSION }}.apk
-          echo -e "\n| x86_64 | $(sha256sum release-fdroid-x86_64-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          echo -e "| x86_64 | $(sha256sum release-fdroid-x86_64-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
 
       - name: Upload Current SHA as an Artifact
         uses: actions/upload-artifact@v4

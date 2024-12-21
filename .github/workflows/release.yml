@@ -70,6 +70,15 @@ jobs:
           ref: 'dev'
           fetch-depth: 0
 
+      - name: Download last SHA artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          repo: 'Sadwhy/Dantotsu-Builder'
+          workflow: release.yml
+          name: last-sha
+          path: .
+        continue-on-error: true
+
       - name: Get Commits Since Last Run
         run: |
           if [ -f last_sha.txt ]; then

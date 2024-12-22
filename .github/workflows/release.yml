@@ -15,6 +15,7 @@ jobs:
       CI: true
     outputs:
       SHOULD_RUN: ${{ steps.compare.outputs.SHOULD_RUN }}
+      LATEST_SHA: ${{ steps.compare.outputs.LATEST_SHA }}
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
         run: |
           LATEST_SHA=$(git rev-parse HEAD)
           echo "Latest commit SHA: $LATEST_SHA"
-          echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_ENV
+          echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_OUTPUT
 
           if [ -f last_sha.txt ]; then
             LAST_SHA=$(cat last_sha.txt)
@@ -97,7 +98,7 @@ jobs:
         continue-on-error: true
 
       - name: Save Current SHA for Next Run
-        run: echo ${{ env.LATEST_SHA }} > last_sha.txt
+        run: echo ${{ needs.check-updates.outputs.LATEST_SHA }} > last_sha.txt
 
       - name: Fetch version name
         run: |

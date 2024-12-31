@@ -38,6 +38,7 @@ jobs:
         run: |
           LATEST_SHA=$(git rev-parse HEAD)
           echo "Latest commit SHA: $LATEST_SHA"
+          echo "LATEST_SHA" > last
           echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_OUTPUT
 
           if [ -f last_sha.txt ]; then
@@ -55,6 +56,15 @@ jobs:
             echo "Updates found. Continuing workflow."
             echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Save Current SHA for Next Run
+        run: echo $(git rev-parse HEAD) > last_sha.txt
+
+      - name: Upload Current SHA as an Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: last_sha.txt
 
   build:
     runs-on: ubuntu-latest
@@ -96,9 +106,6 @@ jobs:
         env:
           CI: true
         continue-on-error: true
-
-      - name: Save Current SHA for Next Run
-        run: echo ${{ needs.check-updates.outputs.LATEST_SHA }} > last_sha.txt
 
       - name: Fetch version name
         run: |
@@ -146,12 +153,6 @@ jobs:
           mv app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-signed.apk release-fdroid-x86_64-${{ env.VERSION }}.apk
           echo -e "| x86_64 | $(sha256sum release-fdroid-x86_64-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
 
-      - name: Upload Current SHA as an Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: last-sha
-          path: last_sha.txt
-
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -180,6 +181,3 @@ jobs:
         with:
           keep_latest: 5
           delete_tags: true
-
-      - name: List files in the directory
-        run: ls -l

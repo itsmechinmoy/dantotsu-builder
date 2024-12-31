@@ -40,7 +40,6 @@ jobs:
         run: |
           LATEST_SHA=$(git rev-parse HEAD)
           echo "Latest commit SHA: $LATEST_SHA"
-          echo "LATEST_SHA" > last
           echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_OUTPUT
 
           if [ -f last_sha.txt ]; then

@@ -103,9 +103,11 @@ jobs:
 
       - name: Fetch version name
         run: |
-          VERSION="v$(git rev-list --count dev)"
+          COMMITS=$(git rev-list --count dev)
+          VERSION="v$COMMITS"
           sed -i '/versionNameSuffix "-fdroid"/d' app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" app/build.gradle
+          sed -i '/versionCode versionName\.split/s/.*/versionCode '"$COMMITS"'/' build.gradle
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 

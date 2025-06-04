@@ -19,10 +19,10 @@ jobs:
       LAST_SHA: ${{ steps.compare.outputs.LAST_SHA }}
 
     steps:
-      - name: Clone Repository
+      - name: Checkout Repository
         run: |
-          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
-          cd Dantotsu
+          rm -rf * .[^.] .??*
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
       - name: Download last SHA artifact
         uses: dawidd6/action-download-artifact@v6
@@ -75,10 +75,10 @@ jobs:
       CI: true
 
     steps:
-      - name: Clone Repository
+      - name: Checkout Repository
         run: |
-          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
-          cd Dantotsu
+          rm -rf * .[^.] .??*
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
       - name: Get Commits Since Last Run
         run: |

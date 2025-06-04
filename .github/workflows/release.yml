@@ -20,12 +20,9 @@ jobs:
 
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'rebelonion/Dantotsu'
-          ref: 'dev'
-          fetch-depth: 0
-          
+        run: |
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
+
       - name: Download last SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
@@ -78,11 +75,8 @@ jobs:
 
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'rebelonion/Dantotsu'
-          ref: 'dev'
-          fetch-depth: 0
+        run: |
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
 
       - name: Get Commits Since Last Run
         run: |

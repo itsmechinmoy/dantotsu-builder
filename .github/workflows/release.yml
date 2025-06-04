@@ -22,6 +22,7 @@ jobs:
       - name: Clone Repository
         run: |
           git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
+          cd Dantotsu
 
       - name: Download last SHA artifact
         uses: dawidd6/action-download-artifact@v6
@@ -77,6 +78,7 @@ jobs:
       - name: Clone Repository
         run: |
           git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git
+          cd Dantotsu
 
       - name: Get Commits Since Last Run
         run: |
@@ -114,7 +116,7 @@ jobs:
                       enable true
                       reset()
                       include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                      universalApk true
+                      universalApk false
                   }
               }
           EOF

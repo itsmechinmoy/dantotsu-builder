@@ -127,7 +127,31 @@ jobs:
           distribution: 'temurin'
           java-version: 17
           cache: gradle
-      
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          build-tools: 34.0.0
+          ndk-version: 28.1.13356709
+          cmake-version: 3.22.1
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+
+      - name: Install additional Android SDK components
+        run: |
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" \
+                     "build-tools;34.0.0" \
+                     "platforms;android-35" \
+                     "ndk;28.1.13356709" \
+                     "cmake;3.22.1"
+
+      - name: Set NDK environment variable
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.1.13356709" >> $GITHUB_ENV
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.1.13356709" >> $GITHUB_ENV
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 

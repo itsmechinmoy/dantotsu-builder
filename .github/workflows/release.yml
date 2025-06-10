@@ -92,11 +92,11 @@ jobs:
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           echo "Commits since $LAST_SHA:"
-          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/rebelonion/Dantotsu/commit/%H)" --max-count=10)
+          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://git.rebelonion.dev/rebelonion/Dantotsu/commit/%H)" --max-count=10)
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
           fi
-          REPO_URL="https://github.com/rebelonion/Dantotsu/pull"
+          REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu/pull"
           echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/\1)@g")
           echo -e "Commits:\n" > commit_log.txt

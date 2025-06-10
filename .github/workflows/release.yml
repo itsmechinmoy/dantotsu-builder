@@ -49,8 +49,11 @@ jobs:
             echo "No previous SHA found."
             echo "LAST_SHA=${LAST_SHA}" >> $GITHUB_OUTPUT
           fi
-
-          if [ "$LATEST_SHA" == "$LAST_SHA" ]; then
+          
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger detected. Forcing build."
+            echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
+          elif [ "$LATEST_SHA" == "$LAST_SHA" ]; then
             echo "No updates found. Canceling the workflow."
             echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
           else

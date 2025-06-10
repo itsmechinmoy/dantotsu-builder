@@ -92,13 +92,13 @@ jobs:
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           echo "Commits since $LAST_SHA:"
-          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://git.rebelonion.dev/rebelonion/Dantotsu/commit/%H)" --max-count=10)
+          REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu"
+          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
           fi
-          REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu/pull"
           echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
-          COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/\1)@g")
+          COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo "Raw COMMIT_LOGS:"
@@ -262,27 +262,73 @@ jobs:
           path: |
             app/build/outputs/apk/google/release/*.apk
 
-      - name: Setup Node.js 18
-        if: ${{ env.SKIP_BUILD != 'true' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
       - name: Create GitHub Release
         if: ${{ env.SKIP_BUILD != 'true' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.VERSION }}
-          name: Dantotsu v${{ env.VERSION }}
-          body_path: commit_log.txt
-          files: |
-            app/build/outputs/apk/google/release/*.apk
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: false
-          generate_release_notes: false
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Dantotsu v${{ env.VERSION }}
+          body_path: commit_log.txt
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets (Universal APK)
+        if: ${{ env.SKIP_BUILD != 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/google/release/${{ env.UNIVERSAL_APK_NAME }}
+          asset_name: ${{ env.UNIVERSAL_APK_NAME }}
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload Split APK Assets (arm64-v8a)
+        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/google/release/app-google-arm64-v8a-release.apk
+          asset_name: app-google-arm64-v8a-release.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload Split APK Assets (armeabi-v7a)
+        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/google/release/app-google-armeabi-v7a-release.apk
+          asset_name: app-google-armeabi-v7a-release.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload Split APK Assets (x86)
+        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/google/release/app-google-x86-release.apk
+          asset_name: app-google-x86-release.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload Split APK Assets (x86_64)
+        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/google/release/app-google-x86_64-release.apk
+          asset_name: app-google-x86_64-release.apk
+          asset_content_type: application/vnd.android.package-archive
 
       - name: Upload Commit Log as Artifact
         uses: actions/upload-artifact@v4

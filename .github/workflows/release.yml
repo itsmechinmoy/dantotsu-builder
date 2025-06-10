@@ -175,17 +175,22 @@ jobs:
           echo "Listing all APK files in app/build/outputs/apk/google/release:"
           ls -la app/build/outputs/apk/google/release/
           
-          # Check for universal APK
-          if [ -f app/build/outputs/apk/google/release/app-google-release.apk ]; then
-            echo "✅ Universal APK found"
+          # Check for universal APK (can be either name)
+          if [ -f app/build/outputs/apk/google/release/app-google-universal-release.apk ]; then
+            echo "✅ Universal APK found (app-google-universal-release.apk)"
             echo "UNIVERSAL_APK_EXISTS=true" >> $GITHUB_ENV
+            echo "UNIVERSAL_APK_NAME=app-google-universal-release.apk" >> $GITHUB_ENV
+          elif [ -f app/build/outputs/apk/google/release/app-google-release.apk ]; then
+            echo "✅ Universal APK found (app-google-release.apk)"
+            echo "UNIVERSAL_APK_EXISTS=true" >> $GITHUB_ENV
+            echo "UNIVERSAL_APK_NAME=app-google-release.apk" >> $GITHUB_ENV
           else
             echo "❌ Universal APK not found!"
             echo "UNIVERSAL_APK_EXISTS=false" >> $GITHUB_ENV
           fi
           
-          # Check for split APKs
-          SPLIT_APKS=$(find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-release.apk" 2>/dev/null || true)
+          # Check for split APKs (exclude universal APK)
+          SPLIT_APKS=$(find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" 2>/dev/null || true)
           if [ -n "$SPLIT_APKS" ]; then
             echo "✅ Split APKs found:"
             echo "$SPLIT_APKS" | while read apk; do
@@ -204,7 +209,7 @@ jobs:
           
           # Universal APK checksum
           if [ "$UNIVERSAL_APK_EXISTS" = "true" ]; then
-            UNIVERSAL_SHA=$(sha256sum app/build/outputs/apk/google/release/app-google-release.apk | cut -d ' ' -f 1)
+            UNIVERSAL_SHA=$(sha256sum "app/build/outputs/apk/google/release/$UNIVERSAL_APK_NAME" | cut -d ' ' -f 1)
             echo "APK_UNIVERSAL_SHA=${UNIVERSAL_SHA}" >> $GITHUB_ENV
             echo "Universal APK SHA256: ${UNIVERSAL_SHA}"
           fi
@@ -212,7 +217,7 @@ jobs:
           # Split APKs checksums
           if [ "$SPLIT_APKS_EXIST" = "true" ]; then
             echo "Split APK checksums:"
-            find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-release.apk" | while read apk; do
+            find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" | while read apk; do
               BASENAME=$(basename "$apk" .apk)
               ABI=$(echo "$BASENAME" | sed 's/app-google-//' | sed 's/-release//')
               SHA=$(sha256sum "$apk" | cut -d ' ' -f 1)
@@ -235,7 +240,7 @@ jobs:
           
           if [ "$SPLIT_APKS_EXIST" = "true" ]; then
             # Add split APK checksums to table
-            find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-release.apk" | while read apk; do
+            find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" | while read apk; do
               BASENAME=$(basename "$apk" .apk)
               ABI=$(echo "$BASENAME" | sed 's/app-google-//' | sed 's/-release//')
               SHA=$(sha256sum "$apk" | cut -d ' ' -f 1)
@@ -257,11 +262,11 @@ jobs:
           path: |
             app/build/outputs/apk/google/release/*.apk
 
-      - name: Setup Node.js 16
+      - name: Setup Node.js 18
         if: ${{ env.SKIP_BUILD != 'true' }}
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Create GitHub Release
         if: ${{ env.SKIP_BUILD != 'true' }}
@@ -274,6 +279,8 @@ jobs:
             app/build/outputs/apk/google/release/*.apk
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -262,73 +262,17 @@ jobs:
           path: |
             app/build/outputs/apk/google/release/*.apk
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release and Upload Assets
         if: ${{ env.SKIP_BUILD != 'true' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Dantotsu v${{ env.VERSION }}
-          body_path: commit_log.txt
+          tag: v${{ env.VERSION }}
+          name: Dantotsu v${{ env.VERSION }}
+          bodyFile: commit_log.txt
+          artifacts: app/build/outputs/apk/google/release/*.apk
           draft: false
           prerelease: false
-
-      - name: Upload Release Assets (Universal APK)
-        if: ${{ env.SKIP_BUILD != 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/google/release/${{ env.UNIVERSAL_APK_NAME }}
-          asset_name: ${{ env.UNIVERSAL_APK_NAME }}
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload Split APK Assets (arm64-v8a)
-        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/google/release/app-google-arm64-v8a-release.apk
-          asset_name: app-google-arm64-v8a-release.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload Split APK Assets (armeabi-v7a)
-        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/google/release/app-google-armeabi-v7a-release.apk
-          asset_name: app-google-armeabi-v7a-release.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload Split APK Assets (x86)
-        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/google/release/app-google-x86-release.apk
-          asset_name: app-google-x86-release.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload Split APK Assets (x86_64)
-        if: ${{ env.SKIP_BUILD != 'true' && env.SPLIT_APKS_EXIST == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/google/release/app-google-x86_64-release.apk
-          asset_name: app-google-x86_64-release.apk
-          asset_content_type: application/vnd.android.package-archive
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Commit Log as Artifact
         uses: actions/upload-artifact@v4

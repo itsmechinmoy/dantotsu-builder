@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 6 * * 5'
+    - cron: '0 6 * * 2'
   workflow_dispatch:
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           repo: 'Dantotsu-Bot/Dantotsu-Builder'
-          workflow: release.yml
+          workflow: preview.yml
           name: last-sha
           path: .
         continue-on-error: true
@@ -73,6 +73,7 @@ jobs:
     if: ${{ needs.check-updates.outputs.SHOULD_RUN == 'true' }}
     env:
       CI: true
+      SKIP_BUILD: false
 
     steps:
       - name: Checkout Repository
@@ -83,128 +84,154 @@ jobs:
       - name: Get Commits Since Last Run
         run: |
           if [ "${{ needs.check-updates.outputs.LAST_SHA }}" != "" ]; then
-          LAST_SHA=${{ needs.check-updates.outputs.LAST_SHA }}
+            LAST_SHA=${{ needs.check-updates.outputs.LAST_SHA }}
           else
-            # Fallback to first commit if no previous SHA available
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          echo "Commits since $LAST_SHA"
-          # Accumulate commit logs
-          echo -e 'Changelogs\n---\n\n'$(git log --pretty=format:'● %s ([%h](https://github.com/rebelonion/Dantotsu/commit/%H)) - %an' $LAST_SHA..HEAD | sed 's/$/\\n/')'\n\n### Checksums\n\n| ABI | SHA-256 |\n| ------- | ------- |' > commit_logs.txt
-          echo $(cat commit_logs.txt)
-        shell: /usr/bin/bash -e {0}
+          echo "Commits since $LAST_SHA:"
+          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/rebelonion/Dantotsu/commit/%H)" --max-count=10)
+          if [ -z "$COMMIT_LOGS" ]; then
+            COMMIT_LOGS="● No new commits since last release"
+          fi
+          REPO_URL="https://github.com/rebelonion/Dantotsu/pull"
+          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
+          COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/\1)@g")
+          echo -e "Commits:\n" > commit_log.txt
+          echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
+          echo "Raw COMMIT_LOGS:"
+          cat commit_log.txt
+        shell: bash
         env:
           CI: true
         continue-on-error: true
 
-      - name: Fetch version name
+      - name: Set variables
         run: |
-          COMMITS=$(git rev-list --count dev)
-          VERSION="v$COMMITS"
-          sed -i '/versionNameSuffix "-fdroid"/d' app/build.gradle
-          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" app/build.gradle
-          sed -i '0,/versionCode/ { /versionCode/d }' app/build.gradle
-          sed -i '0,/versionCode/ s/versionCode.*/versionCode '"$COMMITS"'/' app/build.gradle
+          VER=$(grep -E -o "versionName \".*\"" app/build.gradle | sed -e 's/versionName //g' | tr -d '"')
+          SHA=${{ github.sha }}
+          VERSION="$VER+${SHA:0:7}"
           echo "Version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Inject Split ABI
-        run: |
-          sed -i '/^ *defaultConfig {$/r /dev/stdin' app/build.gradle <<'EOF'
-              splits {
-                  abi {
-                      enable true
-                      reset()
-                      include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                      universalApk false
-                  }
-              }
-          EOF
+      - name: List files in the directory
+        run: ls -l
 
       - name: Setup JDK 17
+        if: ${{ env.SKIP_BUILD != 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
           cache: gradle
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 35
-          build-tools: 34.0.0
-          ndk-version: 28.1.13356709
-          cmake-version: 3.22.1
-
-      - name: Accept Android SDK licenses
-        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
-
-      - name: Install additional Android SDK components
-        run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" \
-                     "build-tools;34.0.0" \
-                     "platforms;android-35" \
-                     "ndk;28.1.13356709" \
-                     "cmake;3.22.1"
-
-      - name: Set NDK environment variable
-        run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.1.13356709" >> $GITHUB_ENV
-          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.1.13356709" >> $GITHUB_ENV
+      - name: Decode Keystore File
+        if: ${{ env.SKIP_BUILD != 'true' }}
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > $GITHUB_WORKSPACE/key.keystore
 
       - name: Make gradlew executable
+        if: ${{ env.SKIP_BUILD != 'true' }}
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleFdroidRelease
-
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        with:
-          releaseDirectory: app/build/outputs/apk/fdroid/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_FILE }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      - name: Move APK and calculate checksum
+        if: ${{ env.SKIP_BUILD != 'true' }}
         run: |
-          mv app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-signed.apk release-fdroid-arm64-v8a-${{ env.VERSION }}.apk
-          echo -e "| arm64-v8a | $(sha256sum release-fdroid-arm64-v8a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          mv app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-signed.apk release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk
-          echo -e "| armeabi-v7a | $(sha256sum release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          mv app/build/outputs/apk/fdroid/release/app-fdroid-x86-release-signed.apk release-fdroid-x86-${{ env.VERSION }}.apk
-          echo -e "| x86 | $(sha256sum release-fdroid-x86-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
-          mv app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-signed.apk release-fdroid-x86_64-${{ env.VERSION }}.apk
-          echo -e "| x86_64 | $(sha256sum release-fdroid-x86_64-${{ env.VERSION }}.apk | cut -d' ' -f1) |" >> commit_logs.txt
+          ./gradlew assembleGoogleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/key.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Build Artifacts
+      - name: Verify APK Output
+        if: ${{ env.SKIP_BUILD != 'true' }}
+        run: |
+          echo "Listing APK files in app/build/outputs/apk/google/release:"
+          ls -l app/build/outputs/apk/google/release/
+          if [ ! -f app/build/outputs/apk/google/release/app-google-universal-release.apk ]; then
+            echo "Universal APK not found!"
+            exit 1
+          fi
+          SPLIT_APKS=$(ls app/build/outputs/apk/google/release/app-google-*-release.apk 2>/dev/null | grep -v app-google-universal-release.apk || true)
+          if [ -z "$SPLIT_APKS" ]; then
+            echo "No split APKs found!"
+            exit 1
+          fi
+          echo "Split APKs found:"
+          echo "$SPLIT_APKS"
+
+      - name: Calculate SHA256 Checksums and Set Environment Variables
+        if: ${{ env.SKIP_BUILD != 'true' }}
+        run: |
+          echo "Calculating SHA256 checksums for APKs..."
+          UNIVERSAL_SHA=$(sha256sum app/build/outputs/apk/google/release/app-google-universal-release.apk | cut -d ' ' -f 1)
+          echo "APK_UNIVERSAL_SHA=${UNIVERSAL_SHA}" >> $GITHUB_ENV
+          echo "Universal APK SHA256: ${UNIVERSAL_SHA}"
+          for apk in app/build/outputs/apk/google/release/app-google-*-release.apk; do
+            if [[ "$apk" != *"universal"* ]]; then
+              filename=$(basename "$apk")
+              echo "Processing: $filename"
+              if [[ "$filename" =~ app-google-([^-]+(-[^-]+)*)-release\.apk ]]; then
+                arch="${BASH_REMATCH[1]}"
+                checksum=$(sha256sum "$apk" | cut -d ' ' -f 1)
+                arch_var=$(echo "${arch}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+                echo "APK_${arch_var}_SHA=${checksum}" >> $GITHUB_ENV
+                echo "${arch} APK SHA256: ${checksum}"
+                echo "Environment variable: APK_${arch_var}_SHA"
+              else
+                echo "Warning: Could not extract architecture from $filename"
+              fi
+            fi
+          done
+
+      - name: Append Checksums to Commit Log
+        if: ${{ env.SKIP_BUILD != 'true' }}
+        run: |
+          echo -e "\n---\n" >> commit_log.txt
+          echo -e "### Checksums\n" >> commit_log.txt
+          echo "| Variant | SHA-256 |" >> commit_log.txt
+          echo "| ------- | ------- |" >> commit_log.txt
+          echo "| Universal | ${{ env.APK_UNIVERSAL_SHA }} |" >> commit_log.txt
+          echo "| arm64-v8a | ${{ env.APK_ARM64_V8A_SHA }} |" >> commit_log.txt
+          echo "| armeabi-v7a | ${{ env.APK_ARMEABI_V7A_SHA }} |" >> commit_log.txt
+          echo "| x86 | ${{ env.APK_X86_SHA }} |" >> commit_log.txt
+          echo "| x86_64 | ${{ env.APK_X86_64_SHA }} |" >> commit_log.txt
+          echo "Updated commit_log.txt with checksums:"
+          cat commit_log.txt
+        shell: bash
+
+      - name: Upload APKs as Build Artifacts
+        if: ${{ env.SKIP_BUILD != 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Dantotsu
+          name: Dantotsu-APKs
           retention-days: 5
-          path: "*.apk"
+          compression-level: 9
+          path: |
+            app/build/outputs/apk/google/release/app-google-universal-release.apk
+            app/build/outputs/apk/google/release/app-google-arm64-v8a-release.apk
+            app/build/outputs/apk/google/release/app-google-armeabi-v7a-release.apk
+            app/build/outputs/apk/google/release/app-google-x86-release.apk
+            app/build/outputs/apk/google/release/app-google-x86_64-release.apk
 
-      - name: Create Release
+      - name: Create GitHub Release
+        if: ${{ env.SKIP_BUILD != 'true' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION }}
-          name: ${{ env.VERSION }}
-          body_path: commit_logs.txt
+          tag_name: v${{ env.VERSION }}
+          name: Dantotsu v${{ env.VERSION }}
+          body_path: commit_log.txt
           files: |
-           release-fdroid-arm64-v8a-${{ env.VERSION }}.apk
-           release-fdroid-armeabi-v7a-${{ env.VERSION }}.apk
-           release-fdroid-x86-${{ env.VERSION }}.apk
-           release-fdroid-x86_64-${{ env.VERSION }}.apk
+            app/build/outputs/apk/google/release/app-google-universal-release.apk
+            app/build/outputs/apk/google/release/app-google-arm64-v8a-release.apk
+            app/build/outputs/apk/google/release/app-google-armeabi-v7a-release.apk
+            app/build/outputs/apk/google/release/app-google-x86-release.apk
+            app/build/outputs/apk/google/release/app-google-x86_64-release.apk
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prune old releases
-        uses: dev-drprasad/delete-older-releases@v0.3.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Commit Log as Artifact
+        uses: actions/upload-artifact@v4
         with:
-          keep_latest: 5
-          delete_tags: true
+          name: commit-log
+          path: commit_log.txt
